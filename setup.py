@@ -46,7 +46,7 @@ setuptools.setup(
         "async-exit-stack>=1.0.1,<2.0.0",
         "async-generator>=1.10,<2.0",
         "base58>=1.0.3",
-        "multiaddr>=0.0.8,<0.1.0",
+        "multiaddr>=0.0.8,<=0.2.0",
         "protobuf>=3.9.0",
         "pycryptodome>=3.0.0,<4.0.0",
         "py-multihash>=3.0.0",
