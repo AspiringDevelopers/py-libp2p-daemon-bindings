@@ -9,26 +9,26 @@ pairs_int_varint_valid = (
     (0, b"\x00"),
     (1, b"\x01"),
     (128, b"\x80\x01"),
-    (2 ** 32, b"\x80\x80\x80\x80\x10"),
-    (2 ** 64 - 1, b"\xff\xff\xff\xff\xff\xff\xff\xff\xff\x01"),
+    (2**32, b"\x80\x80\x80\x80\x10"),
+    (2**64 - 1, b"\xff\xff\xff\xff\xff\xff\xff\xff\xff\x01"),
 )
 
 pairs_int_varint_overflow = (
-    (2 ** 64, b"\x80\x80\x80\x80\x80\x80\x80\x80\x80\x02"),
-    (2 ** 64 + 1, b"\x81\x80\x80\x80\x80\x80\x80\x80\x80\x02"),
+    (2**64, b"\x80\x80\x80\x80\x80\x80\x80\x80\x80\x02"),
+    (2**64 + 1, b"\x81\x80\x80\x80\x80\x80\x80\x80\x80\x02"),
     (
-        2 ** 128,
+        2**128,
         b"\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x04",
     ),
 )
 
 
 class MockReaderWriter(io.BytesIO):
-    async def receive_exactly(self, n):
+    async def receive(self, n):
         await anyio.sleep(0)
         return self.read(n)
 
-    async def send_all(self, b):
+    async def send(self, b):
         await anyio.sleep(0)
         return self.write(b)
 
@@ -49,7 +49,7 @@ async def test_write_unsigned_varint_overflow(integer):
         await write_unsigned_varint(s, integer)
 
 
-@pytest.mark.parametrize("integer", (-1, -(2 ** 32), -(2 ** 64), -(2 ** 128)))
+@pytest.mark.parametrize("integer", (-1, -(2**32), -(2**64), -(2**128)))
 @pytest.mark.anyio
 async def test_write_unsigned_varint_negative(integer):
     s = MockReaderWriter()
@@ -80,7 +80,7 @@ async def test_read_write_unsigned_varint_max_bits_edge(max_bits):
     Test the edge with different `max_bits`
     """
     for i in range(-3, 0):
-        integer = i + (2 ** max_bits)
+        integer = i + (2**max_bits)
         s = MockReaderWriter()
         await write_unsigned_varint(s, integer, max_bits=max_bits)
         s.seek(0, 0)

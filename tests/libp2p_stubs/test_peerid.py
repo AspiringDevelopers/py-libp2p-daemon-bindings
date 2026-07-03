@@ -3,8 +3,8 @@ import random
 import base58
 import multihash
 
-from p2pclient.libp2p_stubs.crypto.rsa import create_new_key_pair
 import p2pclient.libp2p_stubs.peer.id as PeerID
+from p2pclient.libp2p_stubs.crypto.rsa import create_new_key_pair
 from p2pclient.libp2p_stubs.peer.id import ID
 
 ALPHABETS = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"

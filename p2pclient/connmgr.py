@@ -12,8 +12,7 @@ class ConnectionManagerClient:
         self.daemon_connector = daemon_connector
 
     async def tag_peer(self, peer_id: ID, tag: str, weight: int) -> None:
-        """TAG_PEER
-        """
+        """TAG_PEER"""
         connmgr_req = p2pd_pb.ConnManagerRequest(
             type=p2pd_pb.ConnManagerRequest.TAG_PEER,
             peer=peer_id.to_bytes(),
@@ -25,12 +24,11 @@ class ConnectionManagerClient:
         await write_pbmsg(stream, req)
         resp = p2pd_pb.Response()
         await read_pbmsg_safe(stream, resp)
-        await stream.close()
+        await stream.aclose()
         raise_if_failed(resp)
 
     async def untag_peer(self, peer_id: ID, tag: str) -> None:
-        """UNTAG_PEER
-        """
+        """UNTAG_PEER"""
         connmgr_req = p2pd_pb.ConnManagerRequest(
             type=p2pd_pb.ConnManagerRequest.UNTAG_PEER, peer=peer_id.to_bytes(), tag=tag
         )
@@ -39,17 +37,16 @@ class ConnectionManagerClient:
         await write_pbmsg(stream, req)
         resp = p2pd_pb.Response()
         await read_pbmsg_safe(stream, resp)
-        await stream.close()
+        await stream.aclose()
         raise_if_failed(resp)
 
     async def trim(self) -> None:
-        """TRIM
-        """
+        """TRIM"""
         connmgr_req = p2pd_pb.ConnManagerRequest(type=p2pd_pb.ConnManagerRequest.TRIM)
         req = p2pd_pb.Request(type=p2pd_pb.Request.CONNMANAGER, connManager=connmgr_req)
         stream = await self.daemon_connector.open_connection()
         await write_pbmsg(stream, req)
         resp = p2pd_pb.Response()
         await read_pbmsg_safe(stream, resp)
-        await stream.close()
+        await stream.aclose()
         raise_if_failed(resp)

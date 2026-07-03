@@ -3,10 +3,11 @@
 isort:skip_file
 """
 import builtins
+import typing
+
 import google.protobuf.descriptor
 import google.protobuf.internal.enum_type_wrapper
 import google.protobuf.message
-import typing
 import typing_extensions
 
 DESCRIPTOR: google.protobuf.descriptor.FileDescriptor
@@ -38,8 +39,8 @@ class PublicKey(google.protobuf.message.Message):
     data: builtins.bytes
     def __init__(self,
         *,
-        key_type: typing.Optional[global___KeyType.ValueType] = ...,
-        data: typing.Optional[builtins.bytes] = ...,
+        key_type: global___KeyType.ValueType | None = ...,
+        data: builtins.bytes | None = ...,
         ) -> None: ...
     def HasField(self, field_name: typing_extensions.Literal["data",b"data","key_type",b"key_type"]) -> builtins.bool: ...
     def ClearField(self, field_name: typing_extensions.Literal["data",b"data","key_type",b"key_type"]) -> None: ...
@@ -53,8 +54,8 @@ class PrivateKey(google.protobuf.message.Message):
     data: builtins.bytes
     def __init__(self,
         *,
-        key_type: typing.Optional[global___KeyType.ValueType] = ...,
-        data: typing.Optional[builtins.bytes] = ...,
+        key_type: global___KeyType.ValueType | None = ...,
+        data: builtins.bytes | None = ...,
         ) -> None: ...
     def HasField(self, field_name: typing_extensions.Literal["data",b"data","key_type",b"key_type"]) -> builtins.bool: ...
     def ClearField(self, field_name: typing_extensions.Literal["data",b"data","key_type",b"key_type"]) -> None: ...

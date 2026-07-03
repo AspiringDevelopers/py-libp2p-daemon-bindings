@@ -1,24 +1,24 @@
 import io
 
 import anyio
+import pytest
 from google.protobuf.message import EncodeError
 from multiaddr import Multiaddr, protocols
-import pytest
 
+import p2pclient.pb.p2pd_pb2 as p2pd_pb
 from p2pclient import config
 from p2pclient.control import parse_conn_protocol
 from p2pclient.p2pclient import ControlClient, DaemonConnector
-import p2pclient.pb.p2pd_pb2 as p2pd_pb
 from p2pclient.serialization import write_unsigned_varint
 from p2pclient.utils import read_pbmsg_safe, write_pbmsg
 
 
 class MockReaderWriter(io.BytesIO):
-    async def receive_exactly(self, n):
+    async def receive(self, n):
         await anyio.sleep(0)
         return self.read(n)
 
-    async def send_all(self, b):
+    async def send(self, b):
         await anyio.sleep(0)
         return self.write(b)
 
@@ -95,31 +95,36 @@ async def test_read_pbmsg_safe_readexactly_fails():
     host = "127.0.0.1"
     port = 5566
 
-    event = anyio.create_event()
+    event = anyio.Event()
 
-    async with anyio.create_task_group() as tg, await anyio.create_tcp_server(
-        port=port, interface=host
-    ) as server:
+    async with (
+        await anyio.create_tcp_listener(local_port=port, local_host=host) as server,
+        anyio.create_task_group() as tg,
+    ):
 
         async def handler_stream(stream):
             pb_msg = p2pd_pb.Response()
             try:
                 await read_pbmsg_safe(stream, pb_msg)
-            except anyio.exceptions.IncompleteRead:
-                await event.set()
+            except anyio.IncompleteRead:
+                event.set()
 
-        async def server_serve():
-            async for client in server.accept_connections():
-                await tg.spawn(handler_stream, client)
+        async def serve_safely():
+            try:
+                await server.serve(handler_stream)
+            except anyio.ClosedResourceError:
+                pass
 
-        await tg.spawn(server_serve)
+        tg.start_soon(serve_safely)
 
-        stream = await anyio.connect_tcp(address=host, port=port)
+        stream = await anyio.connect_tcp(remote_host=host, remote_port=port)
         # close the stream. Therefore the handler should receive EOF, and then `readexactly` raises.
-        await stream.close()
+        await stream.aclose()
 
-        async with anyio.fail_after(5):
+        with anyio.fail_after(5):
             await event.wait()
+
+        tg.cancel_scope.cancel()
 
 
 @pytest.mark.parametrize(

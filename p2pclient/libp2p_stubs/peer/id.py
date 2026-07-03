@@ -20,7 +20,7 @@ if ENABLE_INLINING:
         _digest: bytes
 
         def __init__(self) -> None:
-            self._digest = bytearray()
+            self._digest = b""
 
         def update(self, input: bytes) -> None:
             self._digest += input

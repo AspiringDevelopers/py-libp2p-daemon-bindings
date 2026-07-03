@@ -1,27 +1,27 @@
-from p2pclient.libp2p_stubs.peer.id import ID
-from multiaddr import Multiaddr
 import pytest
+from multiaddr import Multiaddr
 
-from p2pclient.datastructures import PeerInfo, StreamInfo
 import p2pclient.pb.p2pd_pb2 as p2pd_pb
+from p2pclient.datastructures import PeerInfo, StreamInfo
+from p2pclient.libp2p_stubs.peer.id import ID
 
 
-@pytest.fixture("module")
+@pytest.fixture(scope="module")
 def peer_id_string():
     return "QmS5QmciTXXnCUCyxud5eWFenUMAmvAWSDa1c7dvdXRMZ7"
 
 
-@pytest.fixture("module")
+@pytest.fixture(scope="module")
 def peer_id_bytes():
     return b'\x12 7\x87F.[\xb5\xb1o\xe5*\xc7\xb9\xbb\x11:"Z|j2\x8ad\x1b\xa6\xe5<Ip\xfe\xb4\xf5v'
 
 
-@pytest.fixture("module")
+@pytest.fixture(scope="module")
 def peer_id(peer_id_bytes):
     return ID(peer_id_bytes)
 
 
-@pytest.fixture("module")
+@pytest.fixture(scope="module")
 def maddr():
     return Multiaddr("/unix/123")
 

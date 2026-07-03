@@ -11,15 +11,19 @@ import os
 import subprocess
 import time
 import uuid
-from typing import AsyncIterator, Awaitable, Callable, List, NamedTuple, Tuple
+from collections.abc import AsyncIterator, Awaitable
+from contextlib import asynccontextmanager
+from typing import (
+    BinaryIO,
+    Callable,
+    NamedTuple,
+)
 
 import anyio
-from async_generator import asynccontextmanager
 from multiaddr import Multiaddr, protocols
 
 from p2pclient.p2pclient import Client
 from p2pclient.utils import get_unused_tcp_port
-from typing import BinaryIO, Optional
 
 TIMEOUT_DURATION = 30  # seconds
 
@@ -43,11 +47,11 @@ async def try_until_success(
 
 
 class Daemon(abc.ABC):
-    LINES_HEAD_PATTERN: Tuple[bytes, ...]
+    LINES_HEAD_PATTERN: tuple[bytes, ...]
     control_maddr: Multiaddr
     proc_daemon: subprocess.Popen[bytes]
     log_filename: str = ""
-    f_log: Optional[BinaryIO] = None
+    f_log: BinaryIO | None = None
     is_closed: bool
 
     def __init__(
@@ -75,12 +79,10 @@ class Daemon(abc.ABC):
         self.f_log = open(self.log_filename, "wb")
 
     @abc.abstractmethod
-    def _make_command_line_options(self) -> List[str]:
-        ...
+    def _make_command_line_options(self) -> list[str]: ...
 
     @abc.abstractmethod
-    def _terminate(self) -> None:
-        ...
+    def _terminate(self) -> None: ...
 
     def _run(self, daemon_executable: str) -> None:
         cmd_list = [daemon_executable] + self._make_command_line_options()
@@ -115,15 +117,17 @@ class Daemon(abc.ABC):
 
 
 class GoDaemon(Daemon):
-
     LINES_HEAD_PATTERN = (b"Control socket:", b"Peer ID:", b"Peer Addrs:")
 
-    def _make_command_line_options(self) -> List[str]:
-        cmd_list = [f"-listen={str(self.control_maddr)}"]
+    def _make_command_line_options(self) -> list[str]:
+        cmd_list = [
+            f"-listen={str(self.control_maddr)}",
+            "-hostAddrs=/ip4/127.0.0.1/tcp/0",
+        ]
         if self.enable_connmgr:
             cmd_list += ["-connManager=true", "-connLo=1", "-connHi=2", "-connGrace=0"]
         if self.enable_dht:
-            cmd_list += ["-dht=true"]
+            cmd_list += ["-dhtServer=true"]
         if self.enable_pubsub:
             cmd_list += ["-pubsub=true", "-pubsubRouter=gossipsub"]
 
@@ -134,10 +138,9 @@ class GoDaemon(Daemon):
 
 
 class JsDaemon(Daemon):
-
     LINES_HEAD_PATTERN = (b"daemon has started",)
 
-    def _make_command_line_options(self) -> List[str]:
+    def _make_command_line_options(self) -> list[str]:
         cmd_list = [f"--listen={str(self.control_maddr)}"]
         if self.enable_connmgr:
             cmd_list += [
@@ -240,9 +243,9 @@ async def make_p2pd_pair(
     # wait for daemon ready
     await p2pd.wait_until_ready()
     client = Client(control_maddr=control_maddr, listen_maddr=listen_maddr)
-    try:
-        async with client.listen():
+    async with client.listen():
+        try:
             yield DaemonTuple(daemon=p2pd, client=client)
-    finally:
-        if not p2pd.is_closed:
-            p2pd.close()
+        finally:
+            if not p2pd.is_closed:
+                p2pd.close()

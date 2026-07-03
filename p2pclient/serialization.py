@@ -3,6 +3,19 @@ import anyio
 DEFAULT_MAX_BITS: int = 64
 
 
+async def receive_exactly(stream: anyio.abc.ByteStream, n: int) -> bytes:
+    buffer = bytearray()
+    while len(buffer) < n:
+        try:
+            chunk = await stream.receive(n - len(buffer))
+        except anyio.EndOfStream:
+            raise anyio.IncompleteRead()
+        if not chunk:
+            raise anyio.IncompleteRead()
+        buffer.extend(chunk)
+    return bytes(buffer)
+
+
 async def write_unsigned_varint(
     stream: anyio.abc.SocketStream, integer: int, max_bits: int = DEFAULT_MAX_BITS
 ) -> None:
@@ -17,7 +30,7 @@ async def write_unsigned_varint(
         if integer != 0:
             value |= 0x80
         byte = value.to_bytes(1, "big")
-        await stream.send_all(byte)
+        await stream.send(byte)
         if integer == 0:
             break
 
@@ -30,7 +43,7 @@ async def read_unsigned_varint(
     result: int = 0
     has_next: bool = True
     while has_next:
-        data = await stream.receive_exactly(1)
+        data = await receive_exactly(stream, 1)
         c = data[0]
         value = c & 0x7F
         result |= value << (iteration * 7)

@@ -1,4 +1,5 @@
-from typing import Any, List, Sequence
+from collections.abc import Sequence
+from typing import Any
 
 import multiaddr
 
@@ -7,7 +8,7 @@ from .id import ID
 
 class PeerInfo:
     peer_id: ID
-    addrs: List[multiaddr.Multiaddr]
+    addrs: list[multiaddr.Multiaddr]
 
     def __init__(self, peer_id: ID, addrs: Sequence[multiaddr.Multiaddr]) -> None:
         self.peer_id = peer_id

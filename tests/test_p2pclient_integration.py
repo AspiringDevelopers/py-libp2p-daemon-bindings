@@ -1,15 +1,15 @@
 import functools
+from contextlib import AsyncExitStack
 
 import anyio
 import multihash
 import pytest
-from async_exit_stack import AsyncExitStack
 from multiaddr import Multiaddr
 
 import p2pclient.pb.p2pd_pb2 as p2pd_pb
+from p2pclient.daemon import make_p2pd_pair_ip4, make_p2pd_pair_unix, try_until_success
 from p2pclient.exceptions import ControlFailure
 from p2pclient.libp2p_stubs.peer.id import ID
-from p2pclient.daemon import make_p2pd_pair_unix, make_p2pd_pair_ip4, try_until_success
 from p2pclient.utils import read_pbmsg_safe
 
 TIMEOUT_DURATION = 30  # seconds
@@ -203,7 +203,7 @@ async def test_client_stream_open_success(p2pcs):
     assert stream_info.peer_id == peer_id_1
     assert stream_info.addr in maddrs_1
     assert stream_info.proto == "123"
-    await stream.close()
+    await stream.aclose()
 
     # test case: open with multiple protocols
     stream_info, stream = await p2pcs[0].stream_open(
@@ -212,7 +212,7 @@ async def test_client_stream_open_success(p2pcs):
     assert stream_info.peer_id == peer_id_1
     assert stream_info.addr in maddrs_1
     assert stream_info.proto == "123"
-    await stream.close()
+    await stream.aclose()
 
 
 @pytest.mark.parametrize("enable_control", (True,))
@@ -245,13 +245,13 @@ async def test_client_stream_handler_success(p2pcs):
     proto = "protocol123"
     bytes_to_send = b"yoyoyoyoyog"
     # event for this test function to wait until the handler function receiving the incoming data
-    event_handler_finished = anyio.create_event()
+    event_handler_finished = anyio.Event()
 
     async def handle_proto(stream_info, stream):
         nonlocal event_handler_finished
-        bytes_received = await stream.receive_exactly(len(bytes_to_send))
+        bytes_received = await stream.receive(100)
         assert bytes_received == bytes_to_send
-        await event_handler_finished.set()
+        event_handler_finished.set()
 
     await p2pcs[1].stream_handler(proto, handle_proto)
     assert proto in p2pcs[1].control.handlers
@@ -264,21 +264,21 @@ async def test_client_stream_handler_success(p2pcs):
     # wait until the handler function starts blocking waiting for the data
     # because we haven't sent the data, we know the handler function must still blocking waiting.
     # get the task of the protocol handler
-    await stream.send_all(bytes_to_send)
+    await stream.send(bytes_to_send)
 
     # wait for the handler to finish
-    await stream.close()
+    await stream.aclose()
 
     await event_handler_finished.wait()
 
     # test case: two streams to different handlers respectively
     another_proto = "another_protocol123"
     another_bytes_to_send = b"456"
-    event_another_proto = anyio.create_event()
+    event_another_proto = anyio.Event()
 
     async def handle_another_proto(stream_info, stream):
-        await event_another_proto.set()
-        bytes_received = await stream.receive_exactly(len(another_bytes_to_send))
+        event_another_proto.set()
+        bytes_received = await stream.receive(100)
         assert bytes_received == another_bytes_to_send
 
     await p2pcs[1].stream_handler(another_proto, handle_another_proto)
@@ -286,28 +286,31 @@ async def test_client_stream_handler_success(p2pcs):
     assert handle_another_proto == p2pcs[1].control.handlers[another_proto]
 
     _, another_stream = await p2pcs[0].stream_open(peer_id_1, (another_proto,))
-    await event_another_proto.wait()
-
     # we know at this moment the handler must still blocking wait
 
-    await another_stream.send_all(another_bytes_to_send)
+    await another_stream.send(another_bytes_to_send)
 
-    await another_stream.close()
+    await another_stream.aclose()
+    with anyio.fail_after(5):
+        await event_another_proto.wait()
 
     # test case: registering twice can override the previous registration
-    event_third = anyio.create_event()
+    event_third = anyio.Event()
 
     async def handler_third(stream_info, stream):
-        await event_third.set()
+        event_third.set()
 
     await p2pcs[1].stream_handler(another_proto, handler_third)
     assert another_proto in p2pcs[1].control.handlers
     # ensure the handler is override
     assert handler_third == p2pcs[1].control.handlers[another_proto]
 
-    await p2pcs[0].stream_open(peer_id_1, (another_proto,))
+    _, third_stream = await p2pcs[0].stream_open(peer_id_1, (another_proto,))
+    await third_stream.send(b"123")
+    await third_stream.aclose()
     # ensure the overriding handler is called when the protocol is opened a stream
-    await event_third.wait()
+    with anyio.fail_after(5):
+        await event_third.wait()
 
 
 @pytest.mark.parametrize("enable_control", (True,))
@@ -354,6 +357,7 @@ async def test_client_dht_find_peer_failure(peer_id_random, p2pcs):
 
 
 # DHT FIND_PEERS_CONNECTED_TO_PEER not implemented in jsp2pd
+@pytest.mark.skip(reason="not supported by go-libp2p-daemon v0.9.2")
 @pytest.mark.go_only
 @pytest.mark.parametrize("enable_control, enable_dht", ((True, True),))
 @pytest.mark.anyio
@@ -368,6 +372,7 @@ async def test_client_dht_find_peers_connected_to_peer_success(p2pcs):
 
 
 # DHT FIND_PEERS_CONNECTED_TO_PEER not implemented in jsp2pd
+@pytest.mark.skip(reason="not supported by go-libp2p-daemon v0.9.2")
 @pytest.mark.go_only
 @pytest.mark.parametrize("enable_control, enable_dht", ((True, True),))
 @pytest.mark.anyio
@@ -455,12 +460,13 @@ async def test_client_dht_get_value(p2pcs):
 async def test_client_dht_search_value(p2pcs):
     key_not_existing = b"/123/456"
     # test case: no peer in table
-    with pytest.raises(ControlFailure):
-        await p2pcs[0].dht_search_value(key_not_existing)
+    results = await p2pcs[0].dht_search_value(key_not_existing)
+    assert len(results) == 0
+
     await connect_safe(p2pcs[0], p2pcs[1])
     # test case: non-existing key
-    pinfos = await p2pcs[0].dht_search_value(key_not_existing)
-    assert len(pinfos) == 0
+    results_after = await p2pcs[0].dht_search_value(key_not_existing)
+    assert len(results_after) == 0
 
 
 # FIXME
@@ -657,7 +663,7 @@ async def test_client_pubsub_subscribe(p2pcs):
     await read_pbmsg_safe(stream_2, pubsub_msg_2_0)
     assert ID(getattr(pubsub_msg_2_0, "from")) == peer_id_0
     # test case: unsubscribe by closing the stream
-    await stream_0.close()
+    await stream_0.aclose()
     await anyio.sleep(0)
     assert topic not in await p2pcs[0].pubsub_get_topics()
 

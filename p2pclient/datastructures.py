@@ -1,6 +1,7 @@
+from multiaddr import Multiaddr
+
 from p2pclient.libp2p_stubs.peer.id import ID
 from p2pclient.libp2p_stubs.peer.peerinfo import PeerInfo as PeerInfoLibP2P
-from multiaddr import Multiaddr
 
 from .pb import p2pd_pb2
 

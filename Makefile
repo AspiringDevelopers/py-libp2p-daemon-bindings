@@ -7,14 +7,20 @@ pyis = $(p2pd_pbs:.proto=_pb2.pyi)
 all: protobufs
 
 format:
-	black p2pclient/ tests/ setup.py
-	isort --recursive p2pclient tests setup.py
+	ruff check --fix p2pclient/ tests/
+	ruff format p2pclient/ tests/
 
 lint:
-	black --check p2pclient/ tests/ setup.py
-	isort --recursive --check-only p2pclient tests setup.py
-	flake8 p2pclient/ tests/ setup.py
+	ruff check p2pclient/ tests/
+	ruff format --check p2pclient/ tests/
+
+typecheck:
 	mypy -p p2pclient --config-file mypy.ini
+
+test:
+	pytest --daemon=p2pd tests/
+
+pr: format lint typecheck test
 
 protobufs: $(pys)
 
@@ -23,10 +29,8 @@ protobufs: $(pys)
 
 
 package:
-	# create a source distribution
-	python setup.py sdist
-	# create a wheel
-	python setup.py bdist_wheel
+	# create a source distribution and wheel
+	python -m build
 
 .PHONY: clean
 

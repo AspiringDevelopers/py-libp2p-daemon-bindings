@@ -1,10 +1,11 @@
-from typing import AsyncIterator, Iterable, Sequence, Tuple
+from collections.abc import AsyncIterator, Iterable, Sequence
+from contextlib import asynccontextmanager
 
 import anyio
-from async_generator import asynccontextmanager
+from multiaddr import Multiaddr
+
 from p2pclient.libp2p_stubs.crypto.pb import crypto_pb2 as crypto_pb
 from p2pclient.libp2p_stubs.peer.id import ID
-from multiaddr import Multiaddr
 
 from .connmgr import ConnectionManagerClient
 from .control import ControlClient, DaemonConnector, StreamHandler
@@ -38,13 +39,13 @@ class Client:
     async def close(self) -> None:
         await self.control.close()
 
-    async def identify(self) -> Tuple[ID, Tuple[Multiaddr, ...]]:
+    async def identify(self) -> tuple[ID, tuple[Multiaddr, ...]]:
         return await self.control.identify()
 
     async def connect(self, peer_id: ID, maddrs: Iterable[Multiaddr]) -> None:
         await self.control.connect(peer_id=peer_id, maddrs=maddrs)
 
-    async def list_peers(self) -> Tuple[PeerInfo, ...]:
+    async def list_peers(self) -> tuple[PeerInfo, ...]:
         return await self.control.list_peers()
 
     async def disconnect(self, peer_id: ID) -> None:
@@ -52,7 +53,7 @@ class Client:
 
     async def stream_open(
         self, peer_id: ID, protocols: Sequence[str]
-    ) -> Tuple[StreamInfo, anyio.abc.SocketStream]:
+    ) -> tuple[StreamInfo, anyio.abc.SocketStream]:
         return await self.control.stream_open(peer_id=peer_id, protocols=protocols)
 
     async def stream_handler(self, proto: str, handler_cb: StreamHandler) -> None:
@@ -72,17 +73,17 @@ class Client:
 
     async def dht_find_peers_connected_to_peer(
         self, peer_id: ID
-    ) -> Tuple[PeerInfo, ...]:
+    ) -> tuple[PeerInfo, ...]:
         return await self.dht.find_peers_connected_to_peer(peer_id=peer_id)
 
     async def dht_find_providers(
         self, content_id_bytes: bytes, count: int
-    ) -> Tuple[PeerInfo, ...]:
+    ) -> tuple[PeerInfo, ...]:
         return await self.dht.find_providers(
             content_id_bytes=content_id_bytes, count=count
         )
 
-    async def dht_get_closest_peers(self, key: bytes) -> Tuple[ID, ...]:
+    async def dht_get_closest_peers(self, key: bytes) -> tuple[ID, ...]:
         return await self.dht.get_closest_peers(key=key)
 
     async def dht_get_public_key(self, peer_id: ID) -> crypto_pb.PublicKey:
@@ -91,7 +92,7 @@ class Client:
     async def dht_get_value(self, key: bytes) -> bytes:
         return await self.dht.get_value(key=key)
 
-    async def dht_search_value(self, key: bytes) -> Tuple[bytes, ...]:
+    async def dht_search_value(self, key: bytes) -> tuple[bytes, ...]:
         return await self.dht.search_value(key=key)
 
     async def dht_put_value(self, key: bytes, value: bytes) -> None:
@@ -100,10 +101,10 @@ class Client:
     async def dht_provide(self, cid: bytes) -> None:
         await self.dht.provide(cid=cid)
 
-    async def pubsub_get_topics(self) -> Tuple[str, ...]:
+    async def pubsub_get_topics(self) -> tuple[str, ...]:
         return await self.pubsub.get_topics()
 
-    async def pubsub_list_peers(self, topic: str) -> Tuple[ID, ...]:
+    async def pubsub_list_peers(self, topic: str) -> tuple[ID, ...]:
         return await self.pubsub.list_peers(topic=topic)
 
     async def pubsub_publish(self, topic: str, data: bytes) -> None:
