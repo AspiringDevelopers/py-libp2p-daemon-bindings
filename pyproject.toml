@@ -58,6 +58,9 @@ version = {attr = "p2pclient._version.__version__"}
 [tool.setuptools.packages.find]
 exclude = ["tests", "tests.*"]
 
+[tool.setuptools.package-data]
+p2pclient = ["py.typed"]
+
 [tool.ruff]
 line-length = 88
 target-version = "py310"

@@ -11,7 +11,7 @@ Features:
 - The `Client` class enables communication with a P2P daemon using its protobuf control protocol.
 - The `Daemon` class allows to spawn a P2P daemon from Python code. This is especially useful for testing.
 
-Tested with the Go daemon v0.2.0 and the JS daemon v0.10.2.
+Tested with the Go daemon v0.9.2 and the JS daemon v0.10.2.
 
 ## Supported features (Go daemon)
 
