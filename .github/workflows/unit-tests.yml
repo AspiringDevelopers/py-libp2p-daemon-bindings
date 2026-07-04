@@ -25,11 +25,12 @@ jobs:
       - run: make typecheck
 
   test:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.9", "3.10", "3.11", "3.12", "3.13"]
+        os: [ubuntu-latest, windows-latest]
+        python-version: ["3.10", "3.11", "3.12", "3.13"]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
@@ -43,8 +44,10 @@ jobs:
             ~/go/pkg/mod
           key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
       - name: Install p2pd
+        if: runner.os == 'Linux'
         run: bash -x scripts/install_p2pd.sh
       - name: Install jsp2pd
+        if: runner.os == 'Linux'
         run: npm install --global libp2p-daemon@0.10.2
       - uses: actions/setup-python@v5
         with:
@@ -52,4 +55,6 @@ jobs:
           cache: pip
       - run: pip install -e .[test]
       - run: pytest -v --daemon=p2pd .
+        if: runner.os == 'Linux'
       - run: pytest -v --daemon=jsp2pd .
+        if: runner.os == 'Linux'

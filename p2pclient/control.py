@@ -1,7 +1,7 @@
 import logging
-from collections.abc import AsyncIterator, Awaitable, Iterable, Sequence
+from collections.abc import AsyncIterator, Awaitable, Callable, Iterable, Sequence
 from contextlib import asynccontextmanager
-from typing import Any, Callable
+from typing import Any
 
 import anyio
 from multiaddr import Multiaddr, protocols
@@ -69,8 +69,8 @@ class ControlClient:
     listen_maddr: Multiaddr
     daemon_connector: DaemonConnector
     handlers: dict[str, StreamHandler]
-    listener: Any = None
-    task_group: anyio.abc.TaskGroup = None
+    listener: anyio.abc.Listener[Any] | None = None
+    task_group: anyio.abc.TaskGroup | None = None
     logger = logging.getLogger("p2pclient.ControlClient")
 
     def __init__(
@@ -89,7 +89,6 @@ class ControlClient:
             pass
 
     async def _dispatcher(self, stream: anyio.abc.SocketStream) -> None:
-        print("Dispatcher received connection from daemon!")
         pb_stream_info = p2pd_pb.StreamInfo()
         await read_pbmsg_safe(stream, pb_stream_info)
         stream_info = StreamInfo.from_pb(pb_stream_info)
@@ -208,8 +207,6 @@ class ControlClient:
 
         resp = p2pd_pb.Response()
         await read_pbmsg_safe(stream, resp)
-        if req.type == p2pd_pb.Request.STREAM_OPEN:
-            print(f"STREAM_OPEN for proto {req.streamOpen.proto}")
         raise_if_failed(resp)
 
         pb_stream_info = resp.streamInfo

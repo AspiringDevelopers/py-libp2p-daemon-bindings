@@ -15,12 +15,15 @@ lint:
 	ruff format --check p2pclient/ tests/
 
 typecheck:
-	mypy -p p2pclient --config-file mypy.ini
+	mypy -p p2pclient
 
 test:
 	pytest --daemon=p2pd tests/
 
-pr: format lint typecheck test
+tox:
+	tox
+
+pr: format lint typecheck test tox
 
 protobufs: $(pys)
 
@@ -28,9 +31,26 @@ protobufs: $(pys)
 	protoc --python_out=. --mypy_out=. $<
 
 
-package:
+dist:
 	# create a source distribution and wheel
 	python -m build
+
+setup:
+	pip install -e .[dev]
+
+help:
+	@echo "Available targets:"
+	@echo "  help      - display this help message"
+	@echo "  setup     - install dependencies"
+	@echo "  format    - format code"
+	@echo "  lint      - run linters"
+	@echo "  typecheck - run type checker"
+	@echo "  test      - run tests"
+	@echo "  tox       - run tests and typechecks across multiple environments using tox"
+	@echo "  pr        - run format, lint, typecheck, test, tox"
+	@echo "  protobufs - compile protobufs"
+	@echo "  dist      - create a source distribution and wheel"
+	@echo "  clean     - clean generated files"
 
 .PHONY: clean
 

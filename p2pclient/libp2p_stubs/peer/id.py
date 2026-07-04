@@ -1,5 +1,4 @@
 import hashlib
-from typing import Union
 
 import base58
 import multihash
@@ -89,7 +88,7 @@ class ID:
         return cls(mh_digest.encode())
 
 
-def sha256_digest(data: Union[str, bytes]) -> bytes:
+def sha256_digest(data: str | bytes) -> bytes:
     if isinstance(data, str):
         data = data.encode("utf8")
     return hashlib.sha256(data).digest()

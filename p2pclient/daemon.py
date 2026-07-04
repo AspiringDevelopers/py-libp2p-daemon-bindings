@@ -11,11 +11,10 @@ import os
 import subprocess
 import time
 import uuid
-from collections.abc import AsyncIterator, Awaitable
+from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import asynccontextmanager
 from typing import (
     BinaryIO,
-    Callable,
     NamedTuple,
 )
 
