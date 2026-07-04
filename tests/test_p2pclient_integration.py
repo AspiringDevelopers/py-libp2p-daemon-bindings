@@ -338,6 +338,7 @@ async def test_client_dht_find_peer_success(p2pcs):
     peer_id_2, _ = await p2pcs[2].identify()
     await connect_safe(p2pcs[0], p2pcs[1])
     await connect_safe(p2pcs[1], p2pcs[2])
+    await anyio.sleep(1)
     pinfo = await p2pcs[0].dht_find_peer(peer_id_2)
     assert pinfo.peer_id == peer_id_2
     assert len(pinfo.addrs) != 0
